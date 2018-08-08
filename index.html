@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Reviews Table</title>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+    <script src="https://rawgit.com/wenzhixin/bootstrap-table/develop/src/bootstrap-table.js"></script>
+    <script src="https://rawgit.com/wenzhixin/bootstrap-table/develop/src/extensions/export/bootstrap-table-export.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.13.3/xlsx.min.js"></script>
+    <script src="https://rawgit.com/hhurz/tableExport.jquery.plugin/master/tableExport.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/3.0.4/fuse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.12.1/extensions/filter-control/bootstrap-table-filter-control.js"></script>
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.12.1/extensions/filter-control/bootstrap-table-filter-control.css">
+    <link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.12.1/bootstrap-table.css">
+    <style>
+        .float-right.search {
+            float: left!important;
+            width: 60%;
+        }
+        .fixed-table-toolbar {
+            margin-left: 10px;
+            margin-right: 10px;
+        }
+        .form-control {
+            background-color: lightgray;
+        }
+    </style>
+</head>
+
+<body>
+    <table id="table"
+       data-toolbar="#toolbar"
+       data-search="true"
+       data-custom-search="fuzzySearch"
+       data-show-refresh="true"
+       data-show-toggle="true"
+       data-show-columns="true"
+       data-show-export="true"
+       data-detail-view="true"
+       data-detail-formatter="detailFormatter"
+       data-minimum-count-columns="2"
+       data-show-pagination-switch="true"
+       data-pagination="true"
+       data-page-list="[10, 25, 50, 100, ALL]"
+       data-filter-control="true"
+       height="80%">
+    </table>
+
+    <script type="text/javascript">
+        const $table = $('#table');
+        var selections = [];
+        var allReviews;
+        var ratingFilterData = {
+            '1': '1',
+            '2': '2',
+            '3': '3',
+            '4': '4'
+        };
+
+        function initTable() {
+            $table.bootstrapTable({
+                height: getHeight(),
+                columns: [
+                    [
+                        {
+                            title: 'Category',
+                            field: 'category',
+                            align: 'center',
+                            valign: 'middle',
+                            sortable: true,
+                            filterControl: 'select'
+                        },
+                        {
+                            field: 'title',
+                            title: 'Title',
+                            sortable: true,
+                            align: 'center'
+                        },
+                        {
+                            field: 'rating',
+                            title: 'Rating',
+                            sortable: true,
+                            align: 'center',
+                            filterControl: 'select',
+                            filterData: 'var:ratingFilterData'
+                        },
+                        {
+                            field: 'imdbRating',
+                            title: 'IMDB Rating',
+                            sortable: true,
+                            align: 'center',
+                        },
+                        {
+                            field: 'rtRating',
+                            title: 'RT Rating',
+                            sortable: true,
+                            align: 'center'
+                        },
+                        {
+                            field: 'verified',
+                            title: 'Verified',
+                            sortable: true,
+                            align: 'center',
+                            filterControl: 'select'
+                        },
+                        {
+                            field: 'time',
+                            title: 'Date Added',
+                            sortable: true,
+                            align: 'center',
+                        }
+                    ]
+                ],
+                data: allReviews
+            });
+
+            // sometimes footer render error.
+            setTimeout(() => {
+                $table.bootstrapTable('resetView');
+            }, 200);
+
+            $table.on('all.bs.table', (e, name, args) => {
+                console.log(name, args);
+            });
+            $table.on('refresh.bs.table', () => {
+                location.reload();
+            });
+            $table.on('column-search.bs.table', () => {
+                console.log('column search!');
+            })
+            $(window).resize(() => {
+                $table.bootstrapTable('resetView', {
+                    height: getHeight()
+                });
+            });
+        }
+
+        function detailFormatter(index, row) {
+            const html = [];
+            $.each(row, (key, value) => {
+                html.push(`<p><b>${key}:</b> ${value}</p>`);
+            });
+            return html.join('');
+        }
+
+        function getHeight() {
+            return $(window).height() - $('h1').outerHeight(true);
+        }
+
+        var filters;
+        function fuzzySearch(text, extra) {
+            debugger;
+            if (extra) {
+                console.error(extra);
+            }
+            console.log('fuzzy search');
+            var options = {
+                shouldSort: true,
+                threshold: 0.3,
+                location: 0,
+                distance: 100,
+                maxPatternLength: 32,
+                minMatchCharLength: 1,
+                keys: []
+            };
+            var reviews = allReviews;
+            if (filters !== this.filterColumnsPartial) {
+                const filterKeys = Object.keys(this.filterColumnsPartial);
+                if (!filters || Object.keys(filters).length < filterKeys.length) {
+                    reviews = this.data;
+                    filterKeys.forEach((key) => {
+                        if (!filters || filters[key] === undefined) {
+                            options.keys.push(key);
+                        }
+                    });
+                    filters = Object.assign({}, this.filterColumnsPartial);
+                }
+            } else {
+                options.keys.push('title')
+            }
+
+            var fuse = new Fuse(reviews, options);
+            var results = fuse.search(text);
+            console.log('text:', text);
+            console.log('result:', results);
+
+            this.data = results;
+            setTimeout(() => {
+                console.log(this.data);
+            }, 1000);
+        }
+
+        function getAllReviews() {
+            return $.get("https://api.myjson.com/bins/y7byg", function (data, textStatus, jqXHR) {
+                allReviews = data;
+                console.log('\n--- Reviews up to date with server ---\n');
+            });
+        }
+
+        function refreshTable() {
+            getAllReviews().done(initTable);
+        }
+
+        $(refreshTable);
+    </script>
+</body>
+</html>
