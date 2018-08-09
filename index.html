@@ -55,6 +55,7 @@
         const $table = $('#table');
         var selections = [];
         var allReviews;
+        var oldFilter = {};
         var ratingFilterData = {
             '1': '1',
             '2': '2',
@@ -125,14 +126,11 @@
             }, 200);
 
             $table.on('all.bs.table', (e, name, args) => {
-                console.log(name, args);
+                // console.log(name, args);
             });
             $table.on('refresh.bs.table', () => {
                 location.reload();
             });
-            $table.on('column-search.bs.table', () => {
-                console.log('column search!');
-            })
             $(window).resize(() => {
                 $table.bootstrapTable('resetView', {
                     height: getHeight()
@@ -152,47 +150,68 @@
             return $(window).height() - $('h1').outerHeight(true);
         }
 
-        var filters;
-        function fuzzySearch(text, extra) {
-            debugger;
-            if (extra) {
-                console.error(extra);
+        function searchWithEntireFilter(filter) {
+            var reviews = allReviews;
+            for (var key in filter) {
+                reviews = fuzzySearch(filter[key], [key], reviews);
             }
-            console.log('fuzzy search');
+
+            return { targetReviews: reviews, targetKeys: null };
+        }
+
+        function determineSearchArguments(currentlyDisplayedReviews, newFilter) {
+            const reviews = newFilter === {} ? allReviews : currentlyDisplayedReviews;
+
+            // Filters equal. Text search was performed.
+            if (!newFilter || oldFilter === newFilter) {
+               return { targetReviews: reviews, targetKeys: ['title'] };
+            }
+
+            const newFilterKeys = Object.keys(newFilter);
+            const oldFilterKeys = Object.keys(oldFilter);
+            var keys = [];
+            oldFilter = Object.assign({}, newFilter);
+
+            // Filter added
+            if (oldFilterKeys.length < newFilterKeys.length) {
+                return { targetReviews: reviews, targetKeys: newFilterKeys.filter((key) => !oldFilterKeys.includes(key)) };
+            }
+
+            // Filter removed or changed
+            return searchWithEntireFilter(newFilter);
+        }
+
+        function fuzzySearch(text, keys, reviews) {
+            if (!keys) {
+                const { targetReviews, targetKeys } = determineSearchArguments(this.data, this.filterColumnsPartial);
+                reviews = targetReviews;
+                keys = targetKeys;
+                if (!keys) {
+                    this.data = reviews;
+                    return;
+                }
+            }
+
+            const threshold = keys !== ['title'] ? 0.0 : 0.3;
             var options = {
                 shouldSort: true,
-                threshold: 0.3,
+                threshold: threshold,
                 location: 0,
                 distance: 100,
                 maxPatternLength: 32,
                 minMatchCharLength: 1,
-                keys: []
+                keys: keys
             };
-            var reviews = allReviews;
-            if (filters !== this.filterColumnsPartial) {
-                const filterKeys = Object.keys(this.filterColumnsPartial);
-                if (!filters || Object.keys(filters).length < filterKeys.length) {
-                    reviews = this.data;
-                    filterKeys.forEach((key) => {
-                        if (!filters || filters[key] === undefined) {
-                            options.keys.push(key);
-                        }
-                    });
-                    filters = Object.assign({}, this.filterColumnsPartial);
-                }
-            } else {
-                options.keys.push('title')
-            }
+
 
             var fuse = new Fuse(reviews, options);
             var results = fuse.search(text);
-            console.log('text:', text);
+
+            console.log('search text:', text);
             console.log('result:', results);
 
             this.data = results;
-            setTimeout(() => {
-                console.log(this.data);
-            }, 1000);
+            return results;
         }
 
         function getAllReviews() {
