@@ -55,6 +55,7 @@
         const $table = $('#table');
         var selections = [];
         var allReviews;
+        var titleFiltered = false;
         var oldFilter = {};
         var ratingFilterData = {
             '1': '1',
@@ -150,6 +151,12 @@
             return $(window).height() - $('h1').outerHeight(true);
         }
 
+        function isEqual(obj1, obj2) {
+            function equals(obj1, obj2) {
+                return JSON.stringify(obj1) === JSON.stringify($.extend(true, {}, obj1, obj2));
+            }
+            return equals(obj1, obj2) && equals(obj2, obj1);
+        }
         function searchWithEntireFilter(filter) {
             var reviews = allReviews;
             for (var key in filter) {
@@ -160,11 +167,14 @@
         }
 
         function determineSearchArguments(currentlyDisplayedReviews, newFilter) {
-            const reviews = newFilter === {} ? allReviews : currentlyDisplayedReviews;
-
+            // No filters. Text Search was performed.
+            if (!newFilter) {
+                return { targetReviews: allReviews, targetKeys: ['title'] };
+            }
             // Filters equal. Text search was performed.
-            if (!newFilter || oldFilter === newFilter) {
-               return { targetReviews: reviews, targetKeys: ['title'] };
+            if(isEqual(oldFilter, newFilter)) {
+                const { targetReviews, targetKeys } =  searchWithEntireFilter(newFilter);
+                return { targetReviews: targetReviews, targetKeys: ['title'] };
             }
 
             const newFilterKeys = Object.keys(newFilter);
@@ -174,7 +184,7 @@
 
             // Filter added
             if (oldFilterKeys.length < newFilterKeys.length) {
-                return { targetReviews: reviews, targetKeys: newFilterKeys.filter((key) => !oldFilterKeys.includes(key)) };
+                return { targetReviews: currentlyDisplayedReviews, targetKeys: newFilterKeys.filter((key) => !oldFilterKeys.includes(key)) };
             }
 
             // Filter removed or changed
@@ -192,7 +202,18 @@
                 }
             }
 
-            const threshold = keys !== ['title'] ? 0.0 : 0.3;
+            var threshold = 0;
+            if (keys[0] === 'title') {
+                threshold = 0.3;
+                if ('' === text) {
+                    this.data = reviews;
+                    titleFiltered = false;
+                    return;
+                } else {
+                    titleFiltered = true;
+                }
+            }
+
             var options = {
                 shouldSort: true,
                 threshold: threshold,
