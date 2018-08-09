@@ -55,7 +55,7 @@
         const $table = $('#table');
         var selections = [];
         var allReviews;
-        var titleFiltered = false;
+        var titleFilter = '';
         var oldFilter = {};
         var ratingFilterData = {
             '1': '1',
@@ -157,13 +157,17 @@
             }
             return equals(obj1, obj2) && equals(obj2, obj1);
         }
-        function searchWithEntireFilter(filter) {
+
+        function searchWithEntireFilter(filter, isTitleSearch) {
             var reviews = allReviews;
             for (var key in filter) {
                 reviews = fuzzySearch(filter[key], [key], reviews);
             }
 
-            return { targetReviews: reviews, targetKeys: null };
+            const keys = isTitleSearch || titleFilter !== '' ? ['title'] : null;
+            const text = isTitleSearch ? null : titleFilter;
+
+            return { targetReviews: reviews, targetKeys: keys, targetText: text };
         }
 
         function determineSearchArguments(currentlyDisplayedReviews, newFilter) {
@@ -171,10 +175,10 @@
             if (!newFilter) {
                 return { targetReviews: allReviews, targetKeys: ['title'] };
             }
+
             // Filters equal. Text search was performed.
             if(isEqual(oldFilter, newFilter)) {
-                const { targetReviews, targetKeys } =  searchWithEntireFilter(newFilter);
-                return { targetReviews: targetReviews, targetKeys: ['title'] };
+                return searchWithEntireFilter(newFilter, true);
             }
 
             const newFilterKeys = Object.keys(newFilter);
@@ -184,18 +188,22 @@
 
             // Filter added
             if (oldFilterKeys.length < newFilterKeys.length) {
-                return { targetReviews: currentlyDisplayedReviews, targetKeys: newFilterKeys.filter((key) => !oldFilterKeys.includes(key)) };
+                return {
+                    targetReviews: currentlyDisplayedReviews,
+                    targetKeys: newFilterKeys.filter((key) => !oldFilterKeys.includes(key))
+                };
             }
 
-            // Filter removed or changed
+            // Filter removed, changed, or filters equal (text search performed).
             return searchWithEntireFilter(newFilter);
         }
 
         function fuzzySearch(text, keys, reviews) {
             if (!keys) {
-                const { targetReviews, targetKeys } = determineSearchArguments(this.data, this.filterColumnsPartial);
+                const { targetReviews, targetKeys, targetText } = determineSearchArguments(this.data, this.filterColumnsPartial);
                 reviews = targetReviews;
                 keys = targetKeys;
+                text = targetText || text;
                 if (!keys) {
                     this.data = reviews;
                     return;
@@ -205,12 +213,10 @@
             var threshold = 0;
             if (keys[0] === 'title') {
                 threshold = 0.3;
+                titleFilter = text;
                 if ('' === text) {
                     this.data = reviews;
-                    titleFiltered = false;
                     return;
-                } else {
-                    titleFiltered = true;
                 }
             }
 
@@ -228,8 +234,8 @@
             var fuse = new Fuse(reviews, options);
             var results = fuse.search(text);
 
-            console.log('search text:', text);
-            console.log('result:', results);
+            console.log(`search text: ${text}, search key: ${keys[0]}`);
+            console.log('results:', results);
 
             this.data = results;
             return results;
