@@ -160,11 +160,17 @@
             document.body.style.fontSize = document.body.style.fontSize === '1.5em' ? '1em' : '1.5em';
         }
 
+        function htmlToElement(html) {
+            var template = document.createElement('template');
+            template.innerHTML = html;
+            return template.content.firstChild;
+        }
+
         function addGlassesButton() {
-            const buttonsContainer = document.querySelector('.btn-group.float-right');
-            buttonsContainer.innerHTML = '<button class="btn btn-secondary" type="button"' +
-                ' name="glassesSwitch" aria-label="ramon glasses" title="Ramon Glasses" onclick="toggleGlasses();">' +
-                '<img id="glasses" src="https://i.imgur.com/X9uYIvo.png"></button>' + buttonsContainer.innerHTML;
+            const buttonsContainer = document.querySelector('.btn-group');
+            buttonsContainer.appendChild(htmlToElement('<button class="btn btn-secondary" type="button" name="glassesSwitch"' +
+                ' aria-label="ramon glasses" title="Ramon Glasses" onclick="toggleGlasses()"><img id="glasses"' +
+                ' src="https://i.imgur.com/X9uYIvo.png"></button>'));
         }
 
         function isEqual(obj1, obj2) {
