@@ -18,8 +18,12 @@
     <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.12.2/bootstrap-table.css">
     <style>
+        body {
+            background-color: rgb(50, 54, 57);
+            color: white;
+        }
         .float-right.search {
-            float: left!important;
+            float: left !important;
             width: 60%;
         }
         .fixed-table-toolbar {
@@ -27,7 +31,21 @@
             margin-right: 10px;
         }
         .form-control {
-            background-color: lightgray;
+            background-color: rgb(40, 44, 47);
+            color: white;
+        }
+        .btn, .page-link {
+            background-color: rgb(40, 44, 47);
+            border-color: rgb(40, 44, 47);
+        }
+        .page-item.disabled .page-link {
+            background-color: rgb(44, 48, 50);
+            border-color: rgb(44, 48, 50);
+        }
+        .page-link:hover{
+            background-color: #5a6268;
+            border-color: #5a6268;
+            color: white;
         }
         #glasses {
             width: 25px;
@@ -263,9 +281,17 @@
             return results;
         }
 
+        function roundRatings(reviews) {
+            return reviews.map((review) => {
+                review.rating = `${Math.round(Number(review.rating) * 100) / 100}`;
+
+                return review;
+            });
+        }
+
         function getAllReviews() {
-            return $.get("https://api.myjson.com/bins/y7byg", function (data, textStatus, jqXHR) {
-                allReviews = data;
+            return $.get("https://api.myjson.com/bins/y7byg", function (reviews, textStatus, jqXHR) {
+                allReviews = roundRatings(reviews);
                 console.log('\n--- Reviews up to date with server ---\n');
             });
         }
